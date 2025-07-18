@@ -12,6 +12,14 @@ class ScheduleService:
         today_str = now.strftime('%Y-%m-%d')
         seen = set()
 
+                                              
+        today_traded = False
+        for key in self.trade_log.data:
+            if key.endswith(today_str):
+                today_traded = True
+                break
+
+                      
         for key in self.trade_log.data:
             match = re.match(r"([A-Z]+)_(\d{4}-\d{2}-\d{2})-\((\d+)\)", key)
             if match:
@@ -21,7 +29,8 @@ class ScheduleService:
                 if ticker in seen:
                     continue
                 date_range = [start_date + timedelta(days=i) for i in range(n)]
-                if today in date_range and f"{ticker}_{today_str}" not in self.trade_log.data:
+                if today in date_range:
+                                             
                     auto_tickers.append(ticker)
                     auto_durations.append(n)
                     seen.add(ticker)
@@ -51,7 +60,6 @@ class ScheduleService:
             print("📝 새로운 거래를 시작해주세요")
 
     def print_schedule_after_trade(self, now):
-        print("\n📊 남은 거래일정")
         schedule = {}
         completed = {}
 
@@ -65,25 +73,21 @@ class ScheduleService:
                 if remaining_days.days > 0:
                     schedule[ticker] = remaining_days.days
                 elif remaining_days.days == 0:
-                    if n == 1:
-                        completed[ticker] = self.get_final_n(ticker)
-                    else:
-                        schedule[ticker] = n
+                    completed[ticker] = self.get_final_n(ticker)
 
         max_token_len = max([len(t) for t in list(schedule.keys()) + list(completed.keys())] + [4])
 
         if completed:
+            print("\n✨ 완료된 거래")
             for t in sorted(completed):
                 print(f"🎉 {t:<{max_token_len}} | {completed[t]}일 연속 거래 완료")
 
-        if completed and schedule:
-            print()
-
         if schedule:
+            print("\n📅 남은 거래 일정")
             for t in sorted(schedule):
                 print(f"⏳ {t:<{max_token_len}} | {schedule[t]}일 남음")
         elif not completed:
-            print("📝 새로운 거래를 시작해주세요")
+            print("\n📝 새로운 거래를 시작해주세요")
 
         return {**schedule, **completed}
 

@@ -25,11 +25,11 @@ class TradeLog:
         date_str = now.strftime("%Y-%m-%d")
         timestamp = now.strftime("%Y-%m-%d %H:%M:%S")
 
-        # 기본 키
+              
         base_key = f"{ticker}_{date_str}"
         self.data[base_key] = timestamp
 
-        # 남은 일수용 키
+                  
         n_key = f"{ticker}_{date_str}-({remaining_days})"
         self.data[n_key] = timestamp
 

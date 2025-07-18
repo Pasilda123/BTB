@@ -20,9 +20,17 @@ LOGGER.setLevel(logging.WARNING)
 
 class NoticeCrawler:
     def __init__(self):
-        self.driver = self._configure_selenium_driver()
+        self.driver = None
+        self.last_notice_id = None  
 
     def _configure_selenium_driver(self):
+        if self.driver:
+            try:
+                self.driver.quit()
+            except:
+                pass
+            self.driver = None
+
         options = Options()
         options.add_argument("--headless=new")
         options.add_argument("--disable-gpu")
@@ -45,12 +53,16 @@ class NoticeCrawler:
 
     def get_notices(self, open_browser=False):
         """
-        빗썸 공지사항에서 에어드랍 관련 공지를 크롤링합니다.
+        빗썸 공지사항에서 에어드랍 이벤트만 크롤링합니다.
         """
-        self.driver.set_page_load_timeout(10)
-        summary = []
-
         try:
+            self.driver = self._configure_selenium_driver()
+            self.driver.set_page_load_timeout(10)
+            summary = []
+
+            
+            air_drop_keywords = ["원화 마켓 추가 기념 에어드랍", "릴레이 거래 에어드랍"]
+
             self.driver.get("https://feed.bithumb.com/notice")
             WebDriverWait(self.driver, 10).until(
                 EC.presence_of_element_located((By.ID, "__NEXT_DATA__"))
@@ -67,7 +79,8 @@ class NoticeCrawler:
 
             for item in notices:
                 title = item.get("title", "").strip()
-                if "에어드랍" not in title:
+                
+                if not any(keyword in title for keyword in air_drop_keywords):
                     continue
 
                 date = item.get("publicationDateTime", "").split(" ")[0]
@@ -76,10 +89,16 @@ class NoticeCrawler:
 
                 tokens = self._extract_token_names_from_title(title)
                 nid = item.get("id")
+                
+                
+                if nid == self.last_notice_id:
+                    continue
+                
                 if nid and open_browser:
                     url = f"https://feed.bithumb.com/notice/{nid}"
                     webbrowser.open(url)
                     print(f"[🌐] 상세 페이지 이동: {url}")
+                    self.last_notice_id = nid  
 
                 for token in tokens:
                     summary.append(f"{token}\t{date}")
@@ -93,5 +112,13 @@ class NoticeCrawler:
 
             return summary
 
+        except Exception as e:
+            print(f"[❌] 크롤링 중 오류 발생: {str(e)}")
+            return []
         finally:
-            self.driver.quit() 
+            if self.driver:
+                try:
+                    self.driver.quit()
+                except:
+                    pass
+                self.driver = None
